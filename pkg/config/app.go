@@ -8,8 +8,7 @@ db *gorm.DB
 )
 func Connect() {
 	d, err := gorm.Open("mysql", 
-	"root:rudy12345@tcp(127.0.0.1:3306)/db_go_mysql?charset=utf8mb4&parseTime
-	=True&loc=Local")
+	"root:@tcp(127.0.0.1:3306)/db_go_mysql?charset=utf8mb4&parseTime=True&loc=Local")
 	if err != nil {
 	panic(err)
 	}
