@@ -1,19 +1,23 @@
-package config
+package config // Deklarasi package config
+
 import (
-"github.com/jinzhu/gorm"
-_ "github.com/jinzhu/gorm/dialects/mysql"
+	"github.com/jinzhu/gorm"                  // Impor package gorm
+	_ "github.com/jinzhu/gorm/dialects/mysql" // Impor package mysql dari gorm
 )
+
 var (
-db *gorm.DB
+	db *gorm.DB // Deklarasi variabel global db yang bertipe *gorm.DB
 )
-func Connect() {
-	d, err := gorm.Open("mysql", 
-	"root:@tcp(127.0.0.1:3306)/db_go_mysql?charset=utf8mb4&parseTime=True&loc=Local")
-	if err != nil {
-	panic(err)
+
+func Connect() { // Fungsi Connect untuk menghubungkan ke database
+	d, err := gorm.Open("mysql", // Membuka koneksi ke database MySQL
+		"root:@tcp(127.0.0.1:3306)/db_go_mysql?charset=utf8mb4&parseTime=True&loc=Local") // Menggunakan konfigurasi koneksi
+	if err != nil { // Periksa jika ada error saat membuka koneksi
+		panic(err) // Panic jika terjadi error saat membuka koneksi
 	}
-	db = d
-	}
-	func GetDB() *gorm.DB {
-	return db
-	}
+	db = d // Assign koneksi database yang berhasil dibuka ke variabel global db
+}
+
+func GetDB() *gorm.DB { // Fungsi GetDB untuk mendapatkan koneksi database
+	return db // Mengembalikan koneksi database yang sudah terhubung
+}

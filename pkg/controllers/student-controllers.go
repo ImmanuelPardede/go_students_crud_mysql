@@ -1,85 +1,135 @@
-package controllers
+package controllers // Deklarasi package controllers
 
 import (
-	"encoding/json"
-	"fmt"
-	"net/http"
-	"strconv"
+	"encoding/json" // Impor package encoding/json untuk marshalling dan unmarshalling data JSON
+	"fmt"           // Impor package fmt untuk operasi I/O yang diformat
+	"net/http"      // Impor package net/http untuk fungsionalitas server HTTP
+	"strconv"       // Impor package strconv untuk konversi tipe data
 
-	"github.com/gorilla/mux"
-	"github.com/ImmanuelPardede/go_students_crud_mysql/pkg/models"
-	"github.com/ImmanuelPardede/go_students_crud_mysql/pkg/utils"
+	"github.com/ImmanuelPardede/go_students_crud_mysql/pkg/models" // Impor package models kustom
+	"github.com/gorilla/mux"                                       // Impor package gorilla/mux untuk router HTTP
 )
 
-var NewStudent models.Student
+// Handler untuk mendapatkan daftar semua mahasiswa
+func GetStudentsHandler(w http.ResponseWriter, r *http.Request) {
+	students, err := models.GetAllStudents() // Memanggil fungsi GetAllStudents dari package models
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError) // Mengirim respon error jika terjadi kesalahan
+		return
+	}
 
-func GetStudent(w http.ResponseWriter, r *http.Request) {
-	newStudents := models.GetAllStudents()
-	res, _ := json.Marshal(newStudents)
-	w.Header().Set("Content-Type", "pkglication/json")
-	w.WriteHeader(http.StatusOK)
-	w.Write(res)
-}
-func GetStudentById(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	studentId := vars["studentId"]
-	NIM, err := strconv.ParseInt(studentId, 0, 0)
+	res, err := json.Marshal(students) // Marshal data mahasiswa menjadi JSON
 	if err != nil {
-		fmt.Println("error while parsing")
+		http.Error(w, err.Error(), http.StatusInternalServerError) // Mengirim respon error jika terjadi kesalahan
+		return
 	}
-	studentDetails, _ := models.GetStudentbyId(NIM)
-	res, _ := json.Marshal(studentDetails)
-	w.Header().Set("Content-Type", "pkglication/json")
-	w.WriteHeader(http.StatusOK)
-	w.Write(res)
+
+	w.Header().Set("Content-Type", "application/json") // Set header Content-Type untuk respon JSON
+	w.WriteHeader(http.StatusOK)                       // Set status code OK (200)
+	w.Write(res)                                       // Mengirimkan respon JSON
 }
-func CreateStudent(w http.ResponseWriter, r *http.Request) {
-	CreateStudent := &models.Student{}
-	utils.ParseBody(r, CreateStudent)
-	b := CreateStudent.CreateStudent()
-	res, _ := json.Marshal(b)
-	w.Header().Set("Content-Type", "pkglication/json")
-	w.WriteHeader(http.StatusOK)
-	w.Write(res)
-}
-func DeleteStudent(w http.ResponseWriter, r *http.Request) {
+
+// Handler untuk mendapatkan data mahasiswa berdasarkan ID
+func GetStudentByIDHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	studentId := vars["studentId"]
-	NIM, err := strconv.ParseInt(studentId, 0, 0)
+	studentID := vars["studentId"]                 // Mengambil nilai parameter studentId dari URL
+	nim, err := strconv.ParseInt(studentID, 0, 64) // Konversi nilai studentId menjadi int64
 	if err != nil {
-		fmt.Println("error while parsing")
+		http.Error(w, "Invalid student ID", http.StatusBadRequest) // Mengirim respon error jika studentId tidak valid
+		return
 	}
-	student := models.DeleteStudent(NIM)
-	res, _ := json.Marshal(student)
-	w.Header().Set("Content-Type", "pkglication/json")
-	w.WriteHeader(http.StatusOK)
+
+	student, err := models.GetStudentById(nim) // Memanggil fungsi GetStudentById dari package models
+	if err != nil {
+		http.Error(w, "Student not found", http.StatusNotFound) // Mengirim respon error jika mahasiswa tidak ditemukan
+		return
+	}
+
+	res, err := json.Marshal(student) // Marshal data mahasiswa menjadi JSON
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError) // Mengirim respon error jika terjadi kesalahan
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json") // Set header Content-Type untuk respon JSON
+	w.WriteHeader(http.StatusOK)                       // Set status code OK (200)
+	w.Write(res)                                       // Mengirimkan respon JSON
+}
+
+// Handler untuk membuat data mahasiswa baru
+func CreateStudentHandler(w http.ResponseWriter, r *http.Request) {
+	var student models.Student
+	if err := json.NewDecoder(r.Body).Decode(&student); err != nil {
+		http.Error(w, "Gagal mendekode JSON request body", http.StatusBadRequest)
+		return
+	}
+	defer r.Body.Close() // Menutup body request setelah digunakan
+
+	if err := models.CreateStudent(&student); err != nil {
+		http.Error(w, "Gagal membuat data mahasiswa", http.StatusInternalServerError)
+		return
+	}
+
+	res, err := json.Marshal(student)
+	if err != nil {
+		http.Error(w, "Gagal melakukan marshal data mahasiswa", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
 	w.Write(res)
 }
-func UpdateStudent(w http.ResponseWriter, r *http.Request) {
-	var updateStudent = &models.Student{}
-	utils.ParseBody(r, updateStudent)
+
+// Handler untuk menghapus data mahasiswa berdasarkan ID
+func DeleteStudentHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	studentId := vars["studentId"]
-	NIM, err := strconv.ParseInt(studentId, 0, 0)
+	studentID := vars["studentId"]                 // Mengambil nilai parameter studentId dari URL
+	nim, err := strconv.ParseInt(studentID, 0, 64) // Konversi nilai studentId menjadi int64
 	if err != nil {
-		fmt.Println("error while parsing")
+		http.Error(w, "Invalid student ID", http.StatusBadRequest) // Mengirim respon error jika studentId tidak valid
+		return
 	}
-	studentDetails, db := models.GetStudentbyId(NIM)
-	if updateStudent.Name != "" {
-		studentDetails.Name = updateStudent.Name
+
+	if err := models.DeleteStudent(nim); err != nil { // Memanggil fungsi DeleteStudent dari package models
+		http.Error(w, err.Error(), http.StatusInternalServerError) // Mengirim respon error jika terjadi kesalahan
+		return
 	}
-	if updateStudent.IPK != "" {
-		studentDetails.IPK = updateStudent.IPK
+
+	w.Header().Set("Content-Type", "application/json")                   // Set header Content-Type untuk respon JSON
+	w.WriteHeader(http.StatusOK)                                         // Set status code OK (200)
+	fmt.Fprintf(w, "Student with ID %s deleted successfully", studentID) // Menampilkan pesan sukses
+}
+
+// Handler untuk memperbarui data mahasiswa berdasarkan ID
+func UpdateStudentHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	studentID := vars["studentId"]                 // Mengambil nilai parameter studentId dari URL
+	nim, err := strconv.ParseInt(studentID, 0, 64) // Konversi nilai studentId menjadi int64
+	if err != nil {
+		http.Error(w, "Invalid student ID", http.StatusBadRequest) // Mengirim respon error jika studentId tidak valid
+		return
 	}
-	if updateStudent.Jurusan != "" {
-		studentDetails.Jurusan = updateStudent.Jurusan
+
+	var updatedStudent models.Student
+	if err := json.NewDecoder(r.Body).Decode(&updatedStudent); err != nil { // Mendekode JSON request body menjadi struct Student
+		http.Error(w, "Invalid request payload", http.StatusBadRequest) // Mengirim respon error jika payload tidak valid
+		return
 	}
-	if updateStudent.Angkatan != "" {
-		studentDetails.Angkatan = updateStudent.Angkatan
+
+	student, err := models.UpdateStudent(nim, &updatedStudent) // Memanggil fungsi UpdateStudent dari package models
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError) // Mengirim respon error jika terjadi kesalahan
+		return
 	}
-	db.Save(&studentDetails)
-	res, _ := json.Marshal(studentDetails)
-	w.Header().Set("Content-Type", "pkglication/json")
-	w.WriteHeader(http.StatusOK)
-	w.Write(res)
+
+	res, err := json.Marshal(student) // Marshal data mahasiswa yang diperbarui menjadi JSON
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError) // Mengirim respon error jika terjadi kesalahan
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json") // Set header Content-Type untuk respon JSON
+	w.WriteHeader(http.StatusOK)                       // Set status code OK (200)
+	w.Write(res)                                       // Mengirimkan respon JSON
 }
